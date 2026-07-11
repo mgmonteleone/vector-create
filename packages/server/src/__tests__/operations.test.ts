@@ -119,6 +119,59 @@ describe("Operations (agent-backed)", () => {
     expect(r.source).toBe("heuristic");
   });
 
+  test("steer NEVER throws when the agent throws — degrades to heuristic", async () => {
+    const ops = new Operations({
+      agent: mockAgent({
+        steerGenome: () => {
+          throw new Error("agent exploded");
+        },
+      }),
+      rasterize: stubRaster,
+    });
+    const r = await ops.steer("wormhole", { mouthRx: 110 }, "wider");
+    expect(r.source).toBe("heuristic");
+    expect(r.svg).toContain("<svg");
+    expect(typeof r.rationale).toBe("string");
+  });
+
+  test("steer clamps a garbage genome the agent returns and re-renders a real SVG", async () => {
+    const ops = new Operations({
+      agent: mockAgent({
+        steerGenome: () =>
+          ({
+            // Wildly out-of-range genes, a non-SVG string, a non-string rationale.
+            genome: { throatR: 9999, mouthRx: -5 } as Genome,
+            svg: "not-an-svg",
+            rationale: 42 as unknown as string,
+            source: "llm",
+          }) as never,
+      }),
+      rasterize: stubRaster,
+    });
+    const r = await ops.steer("wormhole", {}, "wider");
+    // Clamped on-brand (throatR 4..12, mouthRx 96..122).
+    expect(Number(r.genome.throatR)).toBeLessThanOrEqual(12);
+    expect(Number(r.genome.throatR)).toBeGreaterThanOrEqual(4);
+    expect(Number(r.genome.mouthRx)).toBeGreaterThanOrEqual(96);
+    expect(Number(r.genome.mouthRx)).toBeLessThanOrEqual(122);
+    // A non-SVG payload is discarded and a real SVG rendered from the clamp.
+    expect(r.svg).toContain("<svg");
+    // A non-string rationale is coerced to a string.
+    expect(typeof r.rationale).toBe("string");
+  });
+
+  test("steer degrades to heuristic when the agent rejects (async throw)", async () => {
+    const ops = new Operations({
+      agent: mockAgent({
+        steerGenome: () => Promise.reject(new Error("model timeout")),
+      }),
+      rasterize: stubRaster,
+    });
+    const r = await ops.steer("wormhole", {}, "tighter throat");
+    expect(r.source).toBe("heuristic");
+    expect(r.svg).toContain("<svg");
+  });
+
   test("close() closes the agent", async () => {
     let closed = false;
     const ops = new Operations({

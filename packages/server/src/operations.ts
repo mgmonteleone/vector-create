@@ -83,6 +83,11 @@ function agentReady(agent: VectorAgentLike | null | undefined): agent is VectorA
   return Boolean(agent?.available);
 }
 
+/** A minimal structural check that a value could be a genome (keyed numbers). */
+function isGenome(value: unknown): value is Genome {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * The operations façade. Construct once (per process, sharing one agent) and
  * hand the same instance to every face.
@@ -116,19 +121,46 @@ export class Operations {
    * Steer a genome with a natural-language prompt. Uses the agent when
    * available; otherwise applies core's deterministic prompt→bias mapping and
    * one sampling step, reporting `source: "heuristic"`.
+   *
+   * Steer is a total function: it never throws and always resolves to a valid,
+   * on-brand (clamped) genome plus a real SVG. A live agent that throws or
+   * returns garbage (out-of-range genes, a non-SVG string, a non-string
+   * rationale) is not trusted verbatim — the genome is re-clamped through
+   * core.sanitize and the SVG re-rendered from it, and any thrown error degrades
+   * to the deterministic heuristic path.
    */
   async steer(conceptId: string, genome: Genome, prompt: string): Promise<SteerResult> {
     const concept = resolveConcept(conceptId);
     if (agentReady(this.agent)) {
-      const r = await this.agent.steerGenome(conceptId, genome, prompt);
-      return {
-        genome: r.genome,
-        svg: r.svg,
-        rationale: r.rationale,
-        source: r.source,
-      };
+      try {
+        const r = await this.agent.steerGenome(conceptId, genome, prompt);
+        const safeGenome = sanitize(concept, isGenome(r?.genome) ? r.genome : genome);
+        const svg =
+          typeof r?.svg === "string" && r.svg.includes("<svg")
+            ? r.svg
+            : coreRender(conceptId, safeGenome);
+        const rationale =
+          typeof r?.rationale === "string" && r.rationale.trim()
+            ? r.rationale
+            : `Steered "${prompt}".`;
+        const source = typeof r?.source === "string" && r.source ? r.source : "llm";
+        return { genome: safeGenome, svg, rationale, source };
+      } catch {
+        // A live agent that throws must not break the op — fall through to the
+        // deterministic heuristic so steer stays total.
+      }
     }
 
+    return this.steerHeuristic(concept, conceptId, genome, prompt);
+  }
+
+  /** Deterministic, agent-free steer. Always succeeds; source "heuristic". */
+  private steerHeuristic(
+    concept: Concept,
+    conceptId: string,
+    genome: Genome,
+    prompt: string
+  ): SteerResult {
     const start = sanitize(concept, genome);
     const { bias, rate, matched } = coreSteer(concept, prompt);
     const { genomes } = sampleConcept(concept, 1, { anchor: start, bias, rate });
