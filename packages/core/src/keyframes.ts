@@ -1,41 +1,27 @@
 /**
- * Keyframe / animation composers — the two proven timeline patterns from the
- * reference SVGs, emitted as pure inline CSS (a <style> block body).
- *
- * Pattern 1 (cosmos-01): a shared linear-infinite timeline where N groups
- *   reveal in staggered opacity windows — a sequential "reveal".
- * Pattern 2 (cosmos-04): per-element scale+opacity "grow from the core" with
- *   slightly different durations so elements pulse organically.
- *
- * All class names and @keyframes ids are namespaced with the per-file prefix.
+ * Keyframe / animation composers — pure functions that emit inline CSS (a
+ * <style> block body) plus the class names to apply to your groups.
  */
 
-type StaggeredRevealOpts = {
-  /** Total loop duration in seconds. Default 3.5s (matches cosmos-01). */
+export type KeyframeResult = {
+  /** Inline CSS (without surrounding <style> tags). */
+  css: string;
+  /** Class names to apply, indexed by group. */
+  classes: string[];
+};
+
+export type StaggeredRevealOptions = {
   duration?: number;
-  /** Fraction of each slot the element stays lit (0..1). Default 0.78. */
   litFraction?: number;
-  /** Fade in/out ramp as a fraction of a slot. Default 0.11. */
   rampFraction?: number;
-  /**
-   * Order in which the N classes appear on the shared timeline. Defaults to
-   * 0,1,2,...,count-1. Pass a permutation to reveal groups out of index order.
-   */
   order?: number[];
 };
 
-/**
- * Emit the cosmos-01 staggered-reveal CSS. Returns the <style> body (no
- * surrounding <style> tags) plus the class names to apply to your groups.
- *
- * The i-th class (`${prefix}_o${i}`) lights up in the slot determined by its
- * position in `order`, so inbound streams can converge in sequence.
- */
 export function staggeredReveal(
   prefix: string,
   count: number,
-  opts: StaggeredRevealOpts = {}
-): { css: string; classes: string[] } {
+  opts: StaggeredRevealOptions = {}
+): KeyframeResult {
   const {
     duration = 3.5,
     litFraction = 0.78,
@@ -48,7 +34,7 @@ export function staggeredReveal(
   const classes: string[] = [];
 
   for (let idx = 0; idx < count; idx++) {
-    const groupIndex = order[idx];
+    const groupIndex = order[idx] ?? idx;
     const cls = `${prefix}_o${groupIndex}`;
     const kf = `${prefix}_k${groupIndex}`;
     classes[groupIndex] = cls;
@@ -60,7 +46,7 @@ export function staggeredReveal(
     const outStart = slotStart + slot * litFraction;
     const outEnd = slotEnd;
 
-    const pct = (v: number): string => `${v.toFixed(2)}%`;
+    const pct = (v: number) => `${v.toFixed(2)}%`;
     parts.push(
       `.${cls}{opacity:0;animation:${kf} ${duration}s linear infinite}` +
         `@keyframes ${kf}{0%,${pct(inStart)}{opacity:0}${pct(inEnd)},${pct(outStart)}{opacity:1}${pct(outEnd)},100%{opacity:0}}`
@@ -70,30 +56,57 @@ export function staggeredReveal(
   return { css: parts.join(""), classes };
 }
 
-type GrowPulseOpts = {
-  /** transform-origin, e.g. "200px 180px". */
-  origin: string;
-  /** Per-element durations in seconds. Length = count. */
-  durations?: number[];
-  /** Starting scale of the grow. Default 0.12 (matches cosmos-04). */
-  startScale?: number;
+export type FlowStreamsOptions = {
+  /** Seconds for one dash to traverse a full path. */
+  duration?: number;
+  /** Lit segment length as fraction of the path. */
+  dash?: number;
+  /** Gap between lit segments as fraction of the path. */
+  gap?: number;
 };
 
 /**
- * Emit the cosmos-04 grow/pulse CSS. Each of the N classes scales up from the
- * core (transform-origin) with its own duration, so rings/petals pulse
- * organically. Returns the <style> body plus the class names.
+ * Continuous FLOW along paths (not a pulse). Emits one shared keyframe that
+ * scrolls stroke-dashoffset from 1 -> 0 over a normalized path (pathLength=1),
+ * plus one class per stream with a staggered negative animation-delay so the
+ * travelling dashes are phase-shifted between streams. Pair with flowConnector,
+ * which draws a faint always-on base line under the moving dash.
  */
-export function growPulse(
+export function flowStreams(
   prefix: string,
   count: number,
-  opts: GrowPulseOpts
-): { css: string; classes: string[] } {
-  const {
-    origin,
-    startScale = 0.12,
-    durations = Array.from({ length: count }, () => 3),
-  } = opts;
+  opts: FlowStreamsOptions = {}
+): KeyframeResult {
+  const { duration = 2.6, dash = 0.12, gap = 0.5 } = opts;
+
+  const classes: string[] = [];
+  const parts: string[] = [];
+  const period = dash + gap; // dashoffset travels one period per cycle
+
+  for (let i = 0; i < count; i++) {
+    const cls = `${prefix}_f${i}`;
+    classes.push(cls);
+    // Negative delay starts each stream mid-flight so they don't pulse in unison.
+    const delay = -((i / count) * duration).toFixed(3);
+    parts.push(
+      `.${cls}{stroke-dasharray:${dash} ${gap};animation:${prefix}_flow ${duration}s linear infinite;animation-delay:${delay}s}`
+    );
+  }
+  parts.push(
+    `@keyframes ${prefix}_flow{from{stroke-dashoffset:${period.toFixed(3)}}to{stroke-dashoffset:0}}`
+  );
+
+  return { css: parts.join(""), classes };
+}
+
+export type GrowPulseOptions = {
+  origin: string;
+  startScale?: number;
+  durations?: number[];
+};
+
+export function growPulse(prefix: string, count: number, opts: GrowPulseOptions): KeyframeResult {
+  const { origin, startScale = 0.12, durations = Array.from({ length: count }, () => 3) } = opts;
 
   const classes: string[] = [];
   const parts: string[] = [];

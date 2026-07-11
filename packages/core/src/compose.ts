@@ -1,12 +1,12 @@
 /**
- * composeSVG — assembles a valid standalone <svg> from the pieces the concept
+ * composeSVG — assembles a valid standalone <svg> from the pieces a concept
  * builder produces. Framework-free; returns a string.
  */
 
 import { canvas } from "./tokens";
 
 export type ComposeOptions = {
-  /** viewBox, defaults to the house canvas "0 0 400 340". */
+  /** viewBox, defaults to the house canvas "0 0 400 400". */
   viewBox?: string;
   width?: number;
   height?: number;
@@ -35,6 +35,6 @@ export function composeSVG(o: ComposeOptions): string {
     o.defs +
     `<style>${o.style}</style>` +
     o.body +
-    `</svg>`
+    "</svg>"
   );
 }

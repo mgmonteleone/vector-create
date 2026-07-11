@@ -1,42 +1,31 @@
 /**
- * SVG primitives — pure functions that return SVG element strings.
- *
- * Every primitive draws with brand tokens only and applies
- * vector-effect:non-scaling-stroke to any stroked element. Filter/gradient
- * ids are namespaced with a per-file prefix so multiple inline-styled SVGs
- * can co-exist on one page without colliding.
+ * SVG primitives — pure functions that return SVG element strings. Framework
+ * free, isomorphic (no DOM, no fs).
  */
-
 import { NON_SCALING, palette, stroke } from "./tokens";
 
-const fmt = (n: number): string =>
-  Number.isInteger(n) ? String(n) : n.toFixed(2);
+export type Point = [number, number];
 
-/**
- * A smooth cubic-Bézier path through the given points via Catmull-Rom → Bézier
- * conversion (tension 0.5). Returns `M ... C ...` with one C segment per span,
- * so swept curves (e.g. the wormhole meridians) read as smooth splines rather
- * than faceted straight-segment polylines. Endpoints are duplicated so the
- * curve passes through the first and last sampled point.
- */
-export function smoothPath(points: Array<[number, number]>): string {
+const fmt = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+
+export function smoothPath(points: Point[]): string {
   if (points.length === 0) {
     return "";
   }
   if (points.length < 3) {
-    // Not enough points to spline; fall back to straight segments.
     const [first, ...rest] = points;
-    return `M${fmt(first[0])} ${fmt(first[1])}${rest
+    const start = first as Point;
+    return `M${fmt(start[0])} ${fmt(start[1])}${rest
       .map((pt) => ` L${fmt(pt[0])} ${fmt(pt[1])}`)
       .join("")}`;
   }
-  const [startX, startY] = points[0];
-  let d = `M${fmt(startX)} ${fmt(startY)}`;
+  const first = points[0] as Point;
+  let d = `M${fmt(first[0])} ${fmt(first[1])}`;
   for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i === 0 ? 0 : i - 1];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2 < points.length ? i + 2 : points.length - 1];
+    const p0 = points[i === 0 ? 0 : i - 1] as Point;
+    const p1 = points[i] as Point;
+    const p2 = points[i + 1] as Point;
+    const p3 = points[i + 2 < points.length ? i + 2 : points.length - 1] as Point;
     const c1x = p1[0] + (p2[0] - p0[0]) / 6;
     const c1y = p1[1] + (p2[1] - p0[1]) / 6;
     const c2x = p2[0] - (p3[0] - p1[0]) / 6;
@@ -46,15 +35,6 @@ export function smoothPath(points: Array<[number, number]>): string {
   return d;
 }
 
-/**
- * The exact defs filter set from the references, prefixed. Includes:
- *  - `${p}_gl`  soft glow      (stdDeviation 1.6)
- *  - `${p}_glg` big glow       (stdDeviation 3)
- *  - `${p}_eg`  edge glow      (stdDeviation 0.9, double feMergeNode)
- *  - `${p}_ng`  node glow      (stdDeviation 2.2)
- *  - `${p}_bw`  white bloom radial gradient
- *  - `${p}_bg`  green bloom radial gradient (#1AA049 -> transparent)
- */
 export function glowFilters(p: string): string {
   return `<defs>
     <filter id="${p}_gl" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -66,40 +46,19 @@ export function glowFilters(p: string): string {
   </defs>`;
 }
 
-/**
- * The userSpaceOnUse radial fill gradient from cosmos-04:
- * #ededf0 (low-op) -> #1AA049 -> #5CCC76.
- */
-export function radialFillGradient(
-  p: string,
-  cx: number,
-  cy: number,
-  r: number
-): string {
+export function radialFillGradient(p: string, cx: number, cy: number, r: number): string {
   return `<defs><radialGradient id="${p}_grad" gradientUnits="userSpaceOnUse" cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(r)}"><stop offset="0%" stop-color="${palette.structure}" stop-opacity="0.02"/><stop offset="45%" stop-color="${palette.glowGreen}" stop-opacity="0.05"/><stop offset="80%" stop-color="${palette.glowGreen}" stop-opacity="0.14"/><stop offset="100%" stop-color="${palette.active}" stop-opacity="0.26"/></radialGradient></defs>`;
 }
 
-/** A faint radial green bloom disc placed behind the core. */
-export function radialBloom(
-  p: string,
-  cx: number,
-  cy: number,
-  r: number
-): string {
+export function radialBloom(p: string, cx: number, cy: number, r: number): string {
   return `<circle cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(r)}" fill="url(#${p}_bg)"/>`;
 }
 
-/** A small filled data node dot (active green by default). */
-export function dataNode(
-  cx: number,
-  cy: number,
-  r = 2.8,
-  fill: string = palette.active
-): string {
+export function dataNode(cx: number, cy: number, r = 2.8, fill: string = palette.active): string {
   return `<circle cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(r)}" fill="${fill}"/>`;
 }
 
-type ConnectorOpts = {
+export type ConnectorOptions = {
   color?: string;
   width?: number;
   opacity?: number;
@@ -107,8 +66,7 @@ type ConnectorOpts = {
   dashed?: boolean;
 };
 
-/** A straight or curved connector line. Pass an SVG path `d` string. */
-export function connector(d: string, opts: ConnectorOpts = {}): string {
+export function connector(d: string, opts: ConnectorOptions = {}): string {
   const {
     color = palette.structure,
     width = stroke.primary,
@@ -121,29 +79,67 @@ export function connector(d: string, opts: ConnectorOpts = {}): string {
   return `<path d="${d}" style="stroke:${color};stroke-width:${width};opacity:${opacity};fill:none;${NON_SCALING}${dashDecl}"${filterAttr}/>`;
 }
 
-/** A concentric dashed ring (accretion-disc ellipse). */
+export type FlowConnectorOptions = {
+  color?: string;
+  width?: number;
+  baseColor?: string;
+  baseOpacity?: number;
+  filter?: string;
+};
+
+/**
+ * A CONTINUOUS-FLOW connector: a faint always-on base line so the route reads
+ * even between dashes, plus an overlaid path whose travelling dash (driven by a
+ * flowStreams class) makes material appear to stream ALONG the path. The moving
+ * path uses pathLength="1" so every stream flows at the same visual speed
+ * regardless of its actual length.
+ */
+export function flowConnector(
+  d: string,
+  flowClass: string,
+  opts: FlowConnectorOptions = {}
+): string {
+  const {
+    color = palette.active,
+    width = stroke.primary,
+    baseColor = color,
+    baseOpacity = 0.28,
+    filter,
+  } = opts;
+  const filterAttr = filter ? ` filter="url(#${filter})"` : "";
+  const base = `<path d="${d}" style="stroke:${baseColor};stroke-width:${width};opacity:${baseOpacity};fill:none;${NON_SCALING}"/>`;
+  const flow = `<path class="${flowClass}" d="${d}" pathLength="1" style="stroke:${color};stroke-width:${width};opacity:1;fill:none;stroke-linecap:round;${NON_SCALING}"${filterAttr}/>`;
+  return base + flow;
+}
+
+export type DashedRingOptions = {
+  opacity?: number;
+  color?: string;
+  width?: number;
+};
+
 export function dashedRing(
   cx: number,
   cy: number,
   rx: number,
   ry: number = rx,
-  opts: { opacity?: number; color?: string; width?: number } = {}
+  opts: DashedRingOptions = {}
 ): string {
-  const {
-    opacity = 0.48,
-    color = palette.structure,
-    width = stroke.fine,
-  } = opts;
+  const { opacity = 0.48, color = palette.structure, width = stroke.fine } = opts;
   return `<ellipse cx="${fmt(cx)}" cy="${fmt(cy)}" rx="${fmt(rx)}" ry="${fmt(ry)}" style="stroke:${color};stroke-width:${width};opacity:${opacity};fill:none;${NON_SCALING};stroke-dasharray:2 5"/>`;
 }
 
-/** The dark near-black core disc with a subtle green edge stroke. */
+export type CoreDiscOptions = {
+  fill?: string;
+  edgeOpacity?: number;
+};
+
 export function coreDisc(
   p: string,
   cx: number,
   cy: number,
   r: number,
-  opts: { fill?: string; edgeOpacity?: number } = {}
+  opts: CoreDiscOptions = {}
 ): string {
   const { fill = palette.coreFill, edgeOpacity = 0.6 } = opts;
   return (
@@ -152,62 +148,29 @@ export function coreDisc(
   );
 }
 
-type FunnelCoreOpts = {
-  /** Waist radius of the throat (world units). Small = tight pinch. */
+export type FunnelCoreOptions = {
   throatR?: number;
-  /** Mouth radius at each flared rim. */
   mouthRx?: number;
-  /** Perspective foreshorten factor: ellipse ry = radius * ellipseK. */
   ellipseK?: number;
-  /** Latitude rings per half (throat->mouth). Total ~= 2*latCount. */
   latCount?: number;
-  /** Longitude meridians swept top rim -> throat -> bottom rim. */
   lonCount?: number;
-  /** Half-height from the throat plane to each mouth plane (world units). */
   heightScale?: number;
-  /** Base opacity of the structure-coloured mesh lines. */
-  ringOpacity?: number;
-  /** Base opacity of the longitude meridian paths. */
-  meridianOpacity?: number;
   /**
-   * Concavity of the funnel wall, 0..1. Each meridian's quadratic control
-   * point sits at (throat_x, `flare` of the way up to the mouth), so higher
-   * `flare` makes the wall hug the axis longer and flare only near the mouth
-   * (a deeper trumpet/gravity-well). ~0.78 gives the approved concave funnel;
-   * 0 collapses to straight radial spokes.
+   * Concavity of the funnel wall, 0..1. Higher = the wall hugs the axis longer
+   * before flaring (a deeper gravity-well).
    */
   flare?: number;
-
-  /** Optional 3/4 tilt in degrees, applied about the throat. */
+  ringOpacity?: number;
+  meridianOpacity?: number;
   tilt?: number;
-  /**
-   * grow/pulse class names. Latitude rings are bucketed into this many pulse
-   * bands (throat band first) so the mesh breathes symmetrically from the
-   * throat origin. When omitted, rings are drawn static.
-   */
   ringClasses?: string[];
 };
 
-/**
- * The black-hole CORE as a parametric WIREFRAME WORMHOLE: a surface of
- * revolution with a CONCAVE funnel wall — two wide flared mouths joined by a
- * smooth pinched throat — rendered see-through as a woven mesh of latitude
- * ellipses AND curved longitude meridians. Each meridian half is a quadratic
- * whose control point sits narrow (throat x) and high (a `flare` fraction up
- * toward the mouth), so the wall descends steeply near the throat and flares
- * only near the mouth (a trumpet/gravity-well silhouette, not a physical
- * catenoid — which is too subtle to read at this scale). The dark singularity
- * fill + green edge glow sit exactly at (cx,cy).
- *
- * The throat stays at (cx,cy) so inbound streams and the output fan still meet
- * the centre unchanged. When `ringClasses` is passed, latitude rings are
- * bucketed into those grow/pulse bands so the mesh gently breathes.
- */
 export function funnelCore(
   p: string,
   cx: number,
   cy: number,
-  opts: FunnelCoreOpts = {}
+  opts: FunnelCoreOptions = {}
 ): string {
   const {
     throatR = 7,
@@ -215,7 +178,7 @@ export function funnelCore(
     ellipseK = 0.32,
     latCount = 16,
     lonCount = 24,
-    heightScale = 120,
+    heightScale = 150,
     ringOpacity = 0.34,
     meridianOpacity = 0.3,
     flare = 0.78,
@@ -223,86 +186,68 @@ export function funnelCore(
     ringClasses,
   } = opts;
 
-  // Half-height from the throat plane up to a mouth plane.
   const mouthOffset = heightScale;
   const mouthRy = mouthRx * ellipseK;
 
-  // The funnel wall as a quadratic Bezier per angle theta, for the TOP half
-  // (throat -> mouth-rim). The control point is placed NARROW (throat x) and
-  // HIGH (a `flare` fraction of the way up to the mouth), so the wall descends
-  // steeply near the throat and flares out only near the mouth => a CONCAVE
-  // trumpet/gravity-well funnel (the LEFT reference shape). This is a stylized
-  // silhouette, not a physical catenoid (which is far too subtle to read).
-  const wallTop = (
-    theta: number
-  ): { mouth: [number, number]; ctrl: [number, number]; throat: [number, number] } => {
+  const wallTop = (theta: number) => {
     const cosT = Math.cos(theta);
     const sinT = Math.sin(theta);
-    return {
-      mouth: [cx + mouthRx * cosT, cy - mouthOffset + mouthRy * sinT],
-      ctrl: [cx + throatR * cosT, cy - mouthOffset * flare + throatR * ellipseK * sinT],
-      throat: [cx + throatR * cosT, cy + throatR * ellipseK * sinT],
-    };
+    const mouth: Point = [cx + mouthRx * cosT, cy - mouthOffset + mouthRy * sinT];
+    const throat: Point = [cx + throatR * cosT, cy + throatR * ellipseK * sinT];
+    const ctrl: Point = [cx + throatR * cosT, cy - mouthOffset * flare + throatR * ellipseK * sinT];
+    return { mouth, ctrl, throat };
   };
-  // Evaluate a quadratic at tt (0 = throat .. 1 = mouth).
-  const qAt = (
-    P0: [number, number],
-    P1: [number, number],
-    P2: [number, number],
-    tt: number
-  ): [number, number] => [
+  const qAt = (P0: Point, P1: Point, P2: Point, tt: number): Point => [
     (1 - tt) ** 2 * P0[0] + 2 * (1 - tt) * tt * P1[0] + tt ** 2 * P2[0],
     (1 - tt) ** 2 * P0[1] + 2 * (1 - tt) * tt * P1[1] + tt ** 2 * P2[1],
   ];
 
   const parts: string[] = [];
 
-  // --- Latitude rings: sample the wall at fractions throat->mouth and draw the
-  // perspective ellipse there (top plus mirrored bottom), so rings sit on the
-  // actual funnel surface and crowd toward the flared mouths. Bucketed into
-  // pulse bands so the mesh breathes symmetrically from the throat.
+  const ringFracs: number[] = [];
+  for (let i = 1; i <= latCount; i++) {
+    ringFracs.push(i / latCount);
+  }
   const bands = ringClasses?.length ?? 0;
   const buckets: string[][] = Array.from({ length: Math.max(bands, 1) }, () => []);
-  const w0 = wallTop(0);
   const emitRingPair = (frac: number): string => {
-    const [px, yWall] = qAt(w0.throat, w0.ctrl, w0.mouth, frac);
+    const w = wallTop(0);
+    const [px] = qAt(w.throat, w.ctrl, w.mouth, frac);
     const rx = px - cx;
     const ry = rx * ellipseK;
-    const style = (op: number): string =>
+    const yWall = qAt(w.throat, w.ctrl, w.mouth, frac)[1];
+    const ry2 = ry;
+    const style = (op: number) =>
       `style="stroke:${palette.structure};stroke-width:${stroke.fine};opacity:${op};fill:none;${NON_SCALING}"`;
     return (
-      `<ellipse cx="${fmt(cx)}" cy="${fmt(yWall)}" rx="${fmt(rx)}" ry="${fmt(ry)}" ${style(ringOpacity)}/>` +
-      `<ellipse cx="${fmt(cx)}" cy="${fmt(2 * cy - yWall)}" rx="${fmt(rx)}" ry="${fmt(ry)}" ${style(ringOpacity)}/>`
+      `<ellipse cx="${fmt(cx)}" cy="${fmt(yWall)}" rx="${fmt(rx)}" ry="${fmt(ry2)}" ${style(ringOpacity)}/>` +
+      `<ellipse cx="${fmt(cx)}" cy="${fmt(2 * cy - yWall)}" rx="${fmt(rx)}" ry="${fmt(ry2)}" ${style(ringOpacity)}/>`
     );
   };
-  for (let i = 1; i <= latCount; i++) {
-    const frac = i / latCount;
+  ringFracs.forEach((frac, idx) => {
     const svg = emitRingPair(frac);
     if (bands > 0) {
-      const b = Math.min(bands - 1, Math.floor(((i - 1) / latCount) * bands));
-      buckets[b].push(svg);
+      const b = Math.min(bands - 1, Math.floor((idx / latCount) * bands));
+      (buckets[b] as string[]).push(svg);
     } else {
       parts.push(svg);
     }
-  }
+  });
   if (bands > 0) {
     for (let b = 0; b < bands; b++) {
-      parts.push(`<g class="${ringClasses?.[b]}">${buckets[b].join("")}</g>`);
+      parts.push(`<g class="${ringClasses?.[b]}">${(buckets[b] as string[]).join("")}</g>`);
     }
   }
 
-  // --- Longitude meridians: for each theta, one quadratic mouth->throat for the
-  // top half plus its vertical mirror for the bottom half, tracing the concave
-  // funnel wall. The narrow-and-high control point is what makes it concave.
   const meridians: string[] = [];
   for (let m = 0; m < lonCount; m++) {
     const theta = (m / lonCount) * Math.PI * 2;
     const w = wallTop(theta);
-    const dTop =
-      `M${fmt(w.mouth[0])} ${fmt(w.mouth[1])} Q${fmt(w.ctrl[0])} ${fmt(w.ctrl[1])} ${fmt(w.throat[0])} ${fmt(w.throat[1])}`;
-    const dBot =
-      `M${fmt(w.mouth[0])} ${fmt(2 * cy - w.mouth[1])} Q${fmt(w.ctrl[0])} ${fmt(2 * cy - w.ctrl[1])} ${fmt(w.throat[0])} ${fmt(2 * cy - w.throat[1])}`;
-    // Every 6th meridian picks up the active green as a highlight thread.
+    const cM = w.mouth;
+    const cC = w.ctrl;
+    const tP = w.throat;
+    const dTop = `M${fmt(cM[0])} ${fmt(cM[1])} Q${fmt(cC[0])} ${fmt(cC[1])} ${fmt(tP[0])} ${fmt(tP[1])}`;
+    const dBot = `M${fmt(cM[0])} ${fmt(2 * cy - cM[1])} Q${fmt(cC[0])} ${fmt(2 * cy - cC[1])} ${fmt(tP[0])} ${fmt(2 * cy - tP[1])}`;
     const highlight = m % 6 === 0;
     const color = highlight ? palette.active : palette.structure;
     const op = highlight ? meridianOpacity + 0.12 : meridianOpacity;
@@ -311,30 +256,28 @@ export function funnelCore(
   }
   parts.push(`<g>${meridians.join("")}</g>`);
 
-  // --- Singularity focal point at the throat: dark fill + green edge glow.
   parts.push(
     `<circle cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(throatR)}" fill="${palette.coreFill}"/>` +
       `<circle cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(throatR)}" style="stroke:${palette.active};stroke-width:${stroke.primary};opacity:0.7;fill:none;${NON_SCALING}" filter="url(#${p}_eg)"/>`
   );
 
   const inner = parts.join("");
-  return tilt
-    ? `<g transform="rotate(${fmt(tilt)} ${fmt(cx)} ${fmt(cy)})">${inner}</g>`
-    : inner;
+  return tilt ? `<g transform="rotate(${fmt(tilt)} ${fmt(cx)} ${fmt(cy)})">${inner}</g>` : inner;
 }
 
-/**
- * A stream of node dots evenly distributed along a straight segment from
- * (x1,y1) to (x2,y2). Used for the inbound "data streams" carrying agent
- * sessions toward the core.
- */
+export type StreamOfNodesOptions = {
+  r?: number;
+  fill?: string;
+  skipEnds?: boolean;
+};
+
 export function streamOfNodes(
   x1: number,
   y1: number,
   x2: number,
   y2: number,
   count: number,
-  opts: { r?: number; fill?: string; skipEnds?: boolean } = {}
+  opts: StreamOfNodesOptions = {}
 ): string {
   const { r = 1.6, fill = palette.active, skipEnds = true } = opts;
   const dots: string[] = [];
@@ -347,13 +290,19 @@ export function streamOfNodes(
   return dots.join("");
 }
 
-/** A small rounded-rect output card (organized output terminal). */
+export type OutputCardOptions = {
+  rx?: number;
+  fill?: string;
+  opacity?: number;
+  stroke?: string;
+};
+
 export function outputCard(
   x: number,
   y: number,
   w: number,
   h: number,
-  opts: { rx?: number; fill?: string; opacity?: number; stroke?: string } = {}
+  opts: OutputCardOptions = {}
 ): string {
   const {
     rx = 4,
