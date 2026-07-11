@@ -142,7 +142,7 @@ export function App() {
     try {
       if (intent === "create") {
         const res = await api.createConcept(text);
-        log(res.source === "fallback" ? "warn" : "agent", `[${res.source}] created "${res.title}"`);
+        log(res.source === "llm" ? "agent" : "warn", `[${res.source}] created "${res.title}"`);
         setSvg(res.svg);
         // Register the new concept in the selector (remote-only until core ships it).
         setConcepts((prev) =>
@@ -153,7 +153,7 @@ export function App() {
         setConceptId(res.conceptId);
       } else {
         const res = await api.steer(conceptId, genome, text);
-        log(res.source === "fallback" ? "warn" : "agent", `[${res.source}] ${res.rationale}`);
+        log(res.source === "llm" ? "agent" : "warn", `[${res.source}] ${res.rationale}`);
         setGenome(res.genome);
         setSvg(res.svg);
       }

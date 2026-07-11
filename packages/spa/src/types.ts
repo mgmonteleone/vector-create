@@ -14,8 +14,11 @@ export type ConceptSummary = {
   baseGenome: Genome;
 };
 
-/** Whether an agent-backed result came from the LLM or the deterministic fallback. */
-export type AgentSource = "llm" | "fallback";
+/**
+ * Whether an agent-backed result came from the LLM (`llm`) or the deterministic
+ * path when auggie-v2 is absent (`fallback` for steer, `heuristic` for create).
+ */
+export type AgentSource = "llm" | "fallback" | "heuristic";
 
 /** POST /api/steer response. */
 export type SteerResult = {

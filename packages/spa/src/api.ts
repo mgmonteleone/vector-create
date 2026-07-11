@@ -44,9 +44,10 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** GET /api/concepts -> [{ id, title, genomeSpec, baseGenome }]. */
-export function listConcepts(): Promise<ConceptSummary[]> {
-  return requestJson<ConceptSummary[]>("/api/concepts");
+/** GET /api/concepts -> { concepts: [{ id, title, genomeSpec, baseGenome }] }. */
+export async function listConcepts(): Promise<ConceptSummary[]> {
+  const body = await requestJson<{ concepts: ConceptSummary[] }>("/api/concepts");
+  return body.concepts;
 }
 
 /** POST /api/render { conceptId, genome, prefix } -> { svg }. */
