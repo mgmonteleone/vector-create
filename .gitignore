@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.turbo/
+*.log
+.DS_Store
+.env
+.env.*
+coverage/
+*.tsbuildinfo
+bun.lockb
+.vite/
