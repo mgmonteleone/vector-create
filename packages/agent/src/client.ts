@@ -5,7 +5,7 @@
  * Every op only needs three things from the SDK: send a prompt and wait for the
  * turn to finish, read back the agent's final text, and close the session. We
  * model exactly that as {@link AgentClient} so tests can inject an in-memory
- * fake (or drive the SDK's own `FakeTransport`) without spawning `auggie-v2`,
+ * fake (or drive the SDK's own `FakeTransport`) without spawning `auggie`,
  * and so the public API never leaks the full SDK type surface.
  */
 import { AuggieClient } from "@augmentcode/cosmos-agent-sdk";
@@ -32,7 +32,8 @@ export type AgentClient = {
 export type AgentClientFactory = () => AgentClient | Promise<AgentClient>;
 
 /**
- * Build a real SDK-backed client that spawns `auggie-v2 --mode rpc`.
+ * Build a real SDK-backed client that spawns the auggie CLI (`auggie --mode
+ * rpc`; the v2 runtime installed via `@augmentcode/auggie-v2`).
  *
  * The extension-UI handler auto-cancels every request: this package drives the
  * agent head-lessly (no human at a UI to answer prompts), so cancelling is the
