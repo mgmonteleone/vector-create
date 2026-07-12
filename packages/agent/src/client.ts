@@ -9,6 +9,7 @@
  * and so the public API never leaks the full SDK type surface.
  */
 import { AuggieClient } from "@augmentcode/cosmos-agent-sdk";
+import { resolveAuggieCommand } from "./detect";
 
 /**
  * The minimal client contract the steer/create ops depend on. Deliberately a
@@ -41,7 +42,13 @@ export type AgentClientFactory = () => AgentClient | Promise<AgentClient>;
  * channel — we never touch or pass tokens here.
  */
 export function spawnAuggieClient(): AgentClient {
+  // The cosmos-agent-sdk spawns `<command> --mode rpc`. Only the v2 SEA binary
+  // (`auggie-v2`, from the augmentcode/auggie releases) supports RPC mode with
+  // env-token auth (AUGMENT_SESSION_AUTH); auggie v1 only offers ACP for
+  // headless use and rejects token auth over it. resolveAuggieCommand honours
+  // AUGGIE_COMMAND/AUGGIE_BINARY overrides, then prefers `auggie-v2` on PATH.
   return new AuggieClient({
+    command: resolveAuggieCommand(),
     // No interactive UI in this headless context; decline every UI request.
     extensionUIHandler: () => undefined,
   });

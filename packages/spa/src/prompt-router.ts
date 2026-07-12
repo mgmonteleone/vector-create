@@ -10,10 +10,14 @@
 export type PromptIntent = "steer" | "create";
 
 // Phrases that signal the user wants a NEW concept authored rather than the
-// current one steered. Kept intentionally conservative: creation is the
-// heavier, agent-only path, so we only route there on a clear creation verb.
+// current one steered. Intentionally strict: creation is the heavier,
+// agent-only path. Conversational steers like "can we make some of the lines
+// blue?" must NOT match — they are steer intents against the current concept.
 const CREATE_PATTERNS: RegExp[] = [
-  /\b(make|create|generate|build|draw|design|invent)\s+(me\s+)?(a|an|some)\b/i,
+  // "make/create a pyramid", "generate me an icon" — noun after article, not
+  // "make some of the lines …" (partitive "some of" is steer, not create).
+  /\b(make|create|generate|build|draw|design|invent)\s+(me\s+)?(a|an)\s+(?!bit\b|little\b)[\w-]+/i,
+  /\b(make|create|generate|build|draw|design|invent)\s+(me\s+)?some\s+(?!of\b)[\w-]+/i,
   /\bnew\s+concept\b/i,
   /\bsomething\s+(about|like|that)\b/i,
   /\b(a|an)\s+concept\s+(for|about|of)\b/i,

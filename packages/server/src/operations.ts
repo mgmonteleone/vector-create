@@ -111,6 +111,14 @@ export class Operations {
     }));
   }
 
+  /** Agent availability (true LLM path vs heuristic fallback). */
+  agentStatus(): { available: boolean; mode: string } {
+    return {
+      available: Boolean(this.agent?.available),
+      mode: this.agent?.mode ?? "fallback",
+    };
+  }
+
   /** Render a concept's (partial) genome to an animated SVG string. */
   render(conceptId: string, genome?: Genome, prefix?: string): RenderResult {
     resolveConcept(conceptId);
