@@ -45,10 +45,13 @@ bun run dev:spa        # run the SPA dev server
 
 ## Runtime dependency: auggie-v2
 
-The agent package needs the `auggie-v2` binary on PATH. Install the prerelease:
+The agent package needs the `auggie-v2` binary on PATH. Install it from the
+`@augmentcode/auggie-v2` package:
 
 ```bash
-npm install -g @augmentcode/auggie@prerelease   # ships auggie-v2
+npm install -g @augmentcode/auggie-v2
+# or
+bun add -g @augmentcode/auggie-v2
 ```
 
 When the binary is unavailable, the agent falls back to the deterministic

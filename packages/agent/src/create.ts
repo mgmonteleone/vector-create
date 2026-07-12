@@ -17,7 +17,7 @@ import { type CreateResult, DEFAULT_TIMEOUT_MS } from "./types";
 
 const UNAVAILABLE_MESSAGE =
   "Concept authoring requires the auggie-v2 LLM agent, which is unavailable. " +
-  "Install it (npm install -g @augmentcode/auggie@prerelease) to author new concepts. " +
+  "Install it (npm install -g @augmentcode/auggie-v2, or bun add -g @augmentcode/auggie-v2) to author new concepts. " +
   "Steering existing concepts still works via the deterministic fallback.";
 
 /**
