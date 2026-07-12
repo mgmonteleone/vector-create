@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.github
+**/*.test.ts
+**/*.test.tsx
+**/__tests__
+**/.vite
+*.md
+!AGENTS.md
+.env
+.env.*

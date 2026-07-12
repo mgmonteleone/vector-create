@@ -8,6 +8,10 @@ describe("classifyPrompt", () => {
       "tighter throat and brighter mesh",
       "make it faster",
       "deeper funnel",
+      "can we make some of the lines blue?",
+      "make some of the meridians thicker",
+      "make the throat tighter",
+      "make it a bit wider",
     ]) {
       expect(classifyPrompt(p)).toBe("steer");
     }

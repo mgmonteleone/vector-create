@@ -47,6 +47,9 @@ export function App() {
   const [saved, setSaved] = useState<SavedSession[]>([]);
   const [saveName, setSaveName] = useState("");
   const [busy, setBusy] = useState(false);
+  /** True when the server has a live auggie/LLM agent (not just REST up). */
+  const [agentLive, setAgentLive] = useState(false);
+  const [agentMode, setAgentMode] = useState<string>("unknown");
 
   const { lines, log } = useLog();
 
@@ -83,7 +86,7 @@ export function App() {
       }
       setOnline(reachable);
       if (reachable) {
-        log("ok", "agent service online :: /api reachable");
+        log("ok", "api service online :: /api reachable");
         try {
           const remote = await api.listConcepts();
           if (!cancelled && remote.length > 0) {
@@ -92,8 +95,29 @@ export function App() {
         } catch {
           log("warn", "concept list fetch failed — using local registry");
         }
+        try {
+          const st = await api.agentStatus();
+          if (!cancelled) {
+            setAgentLive(Boolean(st.available));
+            setAgentMode(st.mode || "unknown");
+            if (st.available) {
+              log("ok", `llm agent ready :: mode=${st.mode}`);
+            } else {
+              log(
+                "warn",
+                `llm agent unavailable (mode=${st.mode}) — steer uses keyword heuristics`
+              );
+            }
+          }
+        } catch {
+          if (!cancelled) {
+            setAgentLive(false);
+            setAgentMode("unknown");
+            log("warn", "agent status endpoint missing — assuming heuristic-only");
+          }
+        }
       } else {
-        log("warn", "agent service UNREACHABLE — offline preview only");
+        log("warn", "api service UNREACHABLE — offline preview only");
         log("info", "server-only actions (steer/create/variations/png) disabled");
       }
       setSaved(storage.listSessions());
@@ -276,8 +300,15 @@ export function App() {
         <header class="topbar">
           <span class="brand">{"VECTOR//CREATE"}</span>
           <div class="btn-row">
-            <span class={`status ${online ? "online" : "offline"}`}>
-              {online ? "◉ AGENT ONLINE" : "◌ OFFLINE — LOCAL PREVIEW"}
+            <span
+              class={`status ${online ? (agentLive ? "online" : "offline") : "offline"}`}
+              title={online ? `agent mode=${agentMode}` : "server unreachable"}
+            >
+              {!online
+                ? "◌ OFFLINE — LOCAL PREVIEW"
+                : agentLive
+                  ? "◉ LLM AGENT READY"
+                  : "◎ API ONLINE · HEURISTIC STEER"}
             </span>
             <button type="button" onClick={toggleTheme} aria-label="toggle theme">
               {theme === "green" ? "amber" : "green"}

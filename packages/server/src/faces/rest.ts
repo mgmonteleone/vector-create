@@ -29,7 +29,12 @@ export function createRestApp(ops: Operations): Hono {
   const app = new Hono();
   app.use("/api/*", cors());
 
+  // Cloud Run GFE reserves some exact `/healthz` paths; also expose `/health`.
   app.get("/healthz", (c) => c.json({ status: "ok" }));
+  app.get("/health", (c) => c.json({ status: "ok" }));
+
+  // GET /api/agent/status -> { available, mode } — true LLM vs heuristic.
+  app.get("/api/agent/status", (c) => c.json(ops.agentStatus()));
 
   // GET /api/concepts -> { concepts: ConceptSummary[] }
   app.get("/api/concepts", (c) => c.json({ concepts: ops.listConcepts() }));

@@ -1,8 +1,8 @@
 /**
  * REST client for the vector-create server. Codes to the documented shapes
  * under /api (see the brief); exact shapes are reconciled with the server
- * package at integration. Base URL defaults to http://localhost:8787 and is
- * overridable via VITE_API_BASE.
+ * package at integration. Base URL defaults to same-origin (empty string) in
+ * production, and http://localhost:8787 in Vite dev. Overridable via VITE_API_BASE.
  *
  * Every method throws on network/HTTP failure so callers can fall back to the
  * client-side core.render preview and surface a terminal-styled error.
@@ -16,7 +16,11 @@ import type {
 } from "./types";
 
 export const API_BASE: string =
-  (import.meta.env?.VITE_API_BASE as string | undefined) ?? "http://localhost:8787";
+  (import.meta.env?.VITE_API_BASE as string | undefined) ??
+  (import.meta.env?.DEV ? "http://localhost:8787" : "");
+
+/** True LLM agent availability as reported by the server. */
+export type AgentStatus = { available: boolean; mode: string };
 
 /** Thrown when a server call fails — callers treat this as "degrade to client". */
 export class ApiError extends Error {
@@ -116,4 +120,9 @@ export async function ping(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** GET /api/agent/status — whether auggie/LLM is live vs heuristic-only. */
+export async function agentStatus(): Promise<AgentStatus> {
+  return requestJson<AgentStatus>("/api/agent/status");
 }
