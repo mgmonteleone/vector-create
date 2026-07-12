@@ -164,6 +164,10 @@ export type FunnelCoreOptions = {
   meridianOpacity?: number;
   tilt?: number;
   ringClasses?: string[];
+  /** Mesh (ring + non-highlight meridian) colour. Defaults to structure. */
+  meshColor?: string;
+  /** Highlight meridian + core-ring colour. Defaults to active. */
+  glowColor?: string;
 };
 
 export function funnelCore(
@@ -184,6 +188,8 @@ export function funnelCore(
     flare = 0.78,
     tilt = 0,
     ringClasses,
+    meshColor = palette.structure,
+    glowColor = palette.active,
   } = opts;
 
   const mouthOffset = heightScale;
@@ -218,7 +224,7 @@ export function funnelCore(
     const yWall = qAt(w.throat, w.ctrl, w.mouth, frac)[1];
     const ry2 = ry;
     const style = (op: number) =>
-      `style="stroke:${palette.structure};stroke-width:${stroke.fine};opacity:${op};fill:none;${NON_SCALING}"`;
+      `style="stroke:${meshColor};stroke-width:${stroke.fine};opacity:${op};fill:none;${NON_SCALING}"`;
     return (
       `<ellipse cx="${fmt(cx)}" cy="${fmt(yWall)}" rx="${fmt(rx)}" ry="${fmt(ry2)}" ${style(ringOpacity)}/>` +
       `<ellipse cx="${fmt(cx)}" cy="${fmt(2 * cy - yWall)}" rx="${fmt(rx)}" ry="${fmt(ry2)}" ${style(ringOpacity)}/>`
@@ -249,7 +255,7 @@ export function funnelCore(
     const dTop = `M${fmt(cM[0])} ${fmt(cM[1])} Q${fmt(cC[0])} ${fmt(cC[1])} ${fmt(tP[0])} ${fmt(tP[1])}`;
     const dBot = `M${fmt(cM[0])} ${fmt(2 * cy - cM[1])} Q${fmt(cC[0])} ${fmt(2 * cy - cC[1])} ${fmt(tP[0])} ${fmt(2 * cy - tP[1])}`;
     const highlight = m % 6 === 0;
-    const color = highlight ? palette.active : palette.structure;
+    const color = highlight ? glowColor : meshColor;
     const op = highlight ? meridianOpacity + 0.12 : meridianOpacity;
     const st = `style="stroke:${color};stroke-width:${stroke.fine};opacity:${op};fill:none;${NON_SCALING}"`;
     meridians.push(`<path d="${dTop}" ${st}/><path d="${dBot}" ${st}/>`);
@@ -258,7 +264,7 @@ export function funnelCore(
 
   parts.push(
     `<circle cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(throatR)}" fill="${palette.coreFill}"/>` +
-      `<circle cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(throatR)}" style="stroke:${palette.active};stroke-width:${stroke.primary};opacity:0.7;fill:none;${NON_SCALING}" filter="url(#${p}_eg)"/>`
+      `<circle cx="${fmt(cx)}" cy="${fmt(cy)}" r="${fmt(throatR)}" style="stroke:${glowColor};stroke-width:${stroke.primary};opacity:0.7;fill:none;${NON_SCALING}" filter="url(#${p}_eg)"/>`
   );
 
   const inner = parts.join("");

@@ -47,6 +47,8 @@ export function App() {
   const [saved, setSaved] = useState<SavedSession[]>([]);
   const [saveName, setSaveName] = useState("");
   const [busy, setBusy] = useState(false);
+  /** The prompt currently in flight, surfaced in the busy UI. */
+  const [busyPrompt, setBusyPrompt] = useState("");
   /** True when the server has a live auggie/LLM agent (not just REST up). */
   const [agentLive, setAgentLive] = useState(false);
   const [agentMode, setAgentMode] = useState<string>("unknown");
@@ -163,6 +165,9 @@ export function App() {
     }
 
     setBusy(true);
+    setBusyPrompt(text);
+    // Log at submit time (before the await) so the console shows work started.
+    log("agent", intent === "create" ? "[agent] creating\u2026" : "[agent] steering\u2026");
     try {
       if (intent === "create") {
         const res = await api.createConcept(text);
@@ -186,6 +191,7 @@ export function App() {
       previewLocal(conceptId, genome);
     } finally {
       setBusy(false);
+      setBusyPrompt("");
     }
   };
 
@@ -349,13 +355,19 @@ export function App() {
           <div class="col">
             <section class="panel grow">
               <div class="panel-title">preview</div>
-              <div class="panel-body preview">
+              <div class={`panel-body preview${busy ? " rendering" : ""}`}>
                 {svg ? (
                   <SvgFrame svg={svg} />
                 ) : (
                   <span class="loading">
                     rendering<span class="cursor">█</span>
                   </span>
+                )}
+                {busy && (
+                  <div class="render-overlay" role="status" aria-live="polite">
+                    <span class="scanline" aria-hidden="true" />
+                    <span class="render-label">agent rendering…</span>
+                  </div>
                 )}
               </div>
             </section>
@@ -424,7 +436,7 @@ export function App() {
           </div>
         </div>
 
-        <PromptBar disabled={busy} onSubmit={onPrompt} />
+        <PromptBar disabled={busy} onSubmit={onPrompt} busyPrompt={busyPrompt} />
       </div>
     </>
   );

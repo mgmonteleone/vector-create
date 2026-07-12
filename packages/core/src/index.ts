@@ -10,6 +10,7 @@
 
 // --- Concept contract types ---
 export type {
+  ColorGeneSpec,
   Concept,
   GeneSpec,
   GeneValue,
@@ -103,6 +104,7 @@ export { composeSVG } from "./compose";
 // --- Built-in concepts ---
 export {
   BASE_GENOME as WORMHOLE_BASE_GENOME,
+  WORMHOLE_COLOR_PALETTE,
   WORMHOLE_PROMPT_RULES,
   WORMHOLE_SPEC,
   wormhole,

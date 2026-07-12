@@ -9,10 +9,16 @@ import type { Concept, Genome, GenomeSpec } from "@vector-create/core";
 function genomeSpecTable(spec: GenomeSpec): string {
   const rows: string[] = [];
   for (const [key, gene] of Object.entries(spec)) {
-    rows.push(
-      `- ${key} (${gene.label}): ${gene.kind}, min=${gene.min}, max=${gene.max}, step=${gene.step}` +
-        (gene.kind === "num" && gene.int ? ", integer" : "")
-    );
+    if (gene.kind === "color") {
+      rows.push(
+        `- ${key} (${gene.label}): color, allowed values (pick the nearest fitting one): ${gene.palette.join(", ")}`
+      );
+    } else {
+      rows.push(
+        `- ${key} (${gene.label}): ${gene.kind}, min=${gene.min}, max=${gene.max}, step=${gene.step}` +
+          (gene.kind === "num" && gene.int ? ", integer" : "")
+      );
+    }
   }
   return rows.join("\n");
 }
@@ -27,7 +33,8 @@ export function buildSteerPrompt(concept: Concept, current: Genome, instruction:
   return [
     `You tune the "${concept.title}" generative vector graphic by adjusting its genome.`,
     "",
-    "Tunable genes (stay within [min,max]; list genes are arrays of numbers):",
+    "Tunable genes (stay within [min,max]; list genes are arrays of numbers;",
+    'color genes are per-element colours — set one to an allowed hex to recolour that element, e.g. "make the mesh lines blue" moves meshColor):',
     genomeSpecTable(concept.genomeSpec),
     "",
     `Current genome (JSON): ${JSON.stringify(current)}`,
@@ -35,7 +42,7 @@ export function buildSteerPrompt(concept: Concept, current: Genome, instruction:
     `Instruction: "${instruction}"`,
     "",
     "Respond with STRICT JSON only, no prose, in this exact shape:",
-    '{"genome": { "<geneName>": <number | number[]> , ... }, "rationale": "<one short sentence>"}',
+    '{"genome": { "<geneName>": <number | number[] | "#rrggbb"> , ... }, "rationale": "<one short sentence>"}',
     "Include only the genes you are changing. Values must respect the bounds above.",
   ].join("\n");
 }

@@ -35,6 +35,22 @@ describe("sanitize (concept-aware clamp)", () => {
     const g = sanitize(WORMHOLE_SPEC, BASE_GENOME, {});
     expect(g.mouthRx).toBe(BASE_GENOME.mouthRx);
   });
+
+  test("keeps an allowed colour value verbatim (canonical casing)", () => {
+    const g = sanitize(WORMHOLE_SPEC, BASE_GENOME, { meshColor: "#4fa3e3" });
+    expect(g.meshColor).toBe("#4FA3E3");
+  });
+
+  test("snaps a near colour to the nearest palette entry", () => {
+    // Close to blue #4FA3E3 but not exact -> snaps to it.
+    const g = sanitize(WORMHOLE_SPEC, BASE_GENOME, { meshColor: "#4ea2e2" });
+    expect(g.meshColor).toBe("#4FA3E3");
+  });
+
+  test("falls back to the base colour on garbage input", () => {
+    const g = sanitize(WORMHOLE_SPEC, BASE_GENOME, { streamColor: "not-a-color" });
+    expect(g.streamColor).toBe(BASE_GENOME.streamColor);
+  });
 });
 
 describe("describe", () => {

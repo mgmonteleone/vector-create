@@ -10,8 +10,8 @@
 /** A genome is a flat bag of tunable values keyed by gene name. */
 export type Genome = Record<string, GeneValue>;
 
-/** A gene is either a single number or a per-band list of numbers. */
-export type GeneValue = number | number[];
+/** A gene is a single number, a per-band list of numbers, or a colour hex. */
+export type GeneValue = number | number[] | string;
 
 /** A numeric gene: clamped to [min,max], mutated by +/- up to `step`. */
 export type NumGeneSpec = {
@@ -34,7 +34,19 @@ export type ListGeneSpec = {
   label: string;
 };
 
-export type GeneSpec = NumGeneSpec | ListGeneSpec;
+/**
+ * A colour gene: a hex string chosen from a fixed, on-brand `palette`. Colour
+ * genes are prompt-first — they are steerable by the agent but deliberately
+ * excluded from mutation/sampling so variations never shuffle the palette.
+ */
+export type ColorGeneSpec = {
+  kind: "color";
+  /** The allowed hex values (e.g. "#5CCC76"); the first is a safe default. */
+  palette: string[];
+  label: string;
+};
+
+export type GeneSpec = NumGeneSpec | ListGeneSpec | ColorGeneSpec;
 
 /**
  * The tunable axes of a concept, keyed by gene name. Bounds are chosen so every

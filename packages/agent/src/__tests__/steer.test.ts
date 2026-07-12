@@ -58,6 +58,29 @@ describe("VectorAgent.steerGenome (LLM, mocked)", () => {
     expect(result.svg).toContain("<svg");
   });
 
+  it("applies a colour gene the agent proposes (recolour an element)", async () => {
+    const agent = await VectorAgent.create({
+      clientFactory: () => mockClient('{"genome":{"meshColor":"#4FA3E3"},"rationale":"blue mesh"}'),
+    });
+    const base = getConcept(CONCEPT)?.baseGenome ?? {};
+    const result = await agent.steerGenome(CONCEPT, base, "make the mesh lines blue");
+    agent.close();
+
+    expect(result.source).toBe("llm");
+    expect(result.genome.meshColor).toBe("#4FA3E3");
+    expect(result.svg).toContain("#4FA3E3");
+  });
+
+  it("snaps an off-palette colour the agent proposes to the nearest brand hue", async () => {
+    const agent = await VectorAgent.create({
+      clientFactory: () => mockClient('{"genome":{"streamColor":"#4ea2e2"}}'),
+    });
+    const base = getConcept(CONCEPT)?.baseGenome ?? {};
+    const result = await agent.steerGenome(CONCEPT, base, "blue streams");
+    agent.close();
+    expect(result.genome.streamColor).toBe("#4FA3E3");
+  });
+
   it("clamps out-of-range values the agent proposes", async () => {
     const agent = await VectorAgent.create({
       // 9999 is far above mouthRx.max — core.sanitize must clamp it.
