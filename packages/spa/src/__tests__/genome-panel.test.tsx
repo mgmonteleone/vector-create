@@ -3,16 +3,20 @@ import { describe, expect, it, vi } from "vitest";
 import { GenomePanel } from "../components/GenomePanel";
 import type { Genome, GenomeSpec } from "../types";
 
+const COLOR_PALETTE = ["#ededf0", "#5CCC76", "#4FA3E3"];
+
 const SPEC: GenomeSpec = {
   throatR: { kind: "num", min: 4, max: 12, step: 2, int: true, label: "throat radius" },
   flare: { kind: "num", min: 0.6, max: 0.9, step: 0.08, label: "concavity" },
   ringDurations: { kind: "list", min: 2.2, max: 5, step: 0.6, label: "ring pulse speeds" },
+  meshColor: { kind: "color", palette: COLOR_PALETTE, label: "mesh colour" },
 };
 
 const GENOME: Genome = {
   throatR: 7,
   flare: 0.78,
   ringDurations: [3.2, 4.2, 2.6],
+  meshColor: "#5CCC76",
 };
 
 describe("GenomePanel", () => {
@@ -63,6 +67,25 @@ describe("GenomePanel", () => {
     fireEvent.input(throat, { target: { value: "9.9" } });
 
     expect(onChange.mock.calls[0]?.[0]).toMatchObject({ throatR: 10 });
+  });
+
+  it("renders a swatch row for a colour gene with the active swatch highlighted", () => {
+    const { container } = render(<GenomePanel spec={SPEC} genome={GENOME} onChange={() => {}} />);
+    const swatches = container.querySelectorAll('[data-gene="meshColor"] .swatch');
+    expect(swatches.length).toBe(COLOR_PALETTE.length);
+    // The active colour (#5CCC76) is the highlighted swatch.
+    const active = container.querySelectorAll('[data-gene="meshColor"] .swatch.active');
+    expect(active.length).toBe(1);
+    expect((active[0] as HTMLElement).getAttribute("title")).toBe("#5CCC76");
+  });
+
+  it("emits the chosen hex when a swatch is clicked", () => {
+    const onChange = vi.fn();
+    const { getByLabelText } = render(
+      <GenomePanel spec={SPEC} genome={GENOME} onChange={onChange} />
+    );
+    fireEvent.click(getByLabelText("mesh colour #4FA3E3"));
+    expect(onChange.mock.calls[0]?.[0]).toMatchObject({ meshColor: "#4FA3E3" });
   });
 
   it("updates only the moved band of a list gene", () => {

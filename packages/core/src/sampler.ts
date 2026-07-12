@@ -46,6 +46,11 @@ export function mutate(
     if (!gene) {
       continue;
     }
+    // Colour genes are prompt-first: never jittered by mutation/sampling, so
+    // variations keep the current palette (sanitize carries the value through).
+    if (gene.kind === "color") {
+      continue;
+    }
     const dir = bias[key];
     if (gene.kind === "num") {
       const u = dir ? 0.25 + rand() * 0.75 : rand() * 2 - 1;

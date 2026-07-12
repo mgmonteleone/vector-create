@@ -39,6 +39,10 @@ export function GenomePanel({ spec, genome, onChange }: Props) {
     onChange({ ...genome, [key]: nextBand });
   };
 
+  const setColor = (key: string, hex: string) => {
+    onChange({ ...genome, [key]: hex });
+  };
+
   return (
     <div>
       {keys.map((key) => {
@@ -47,6 +51,35 @@ export function GenomePanel({ spec, genome, onChange }: Props) {
           return null;
         }
         const raw = genome[key];
+
+        if (gene.kind === "color") {
+          const active = typeof raw === "string" ? raw.toLowerCase() : "";
+          return (
+            <div class="gene" key={key} data-gene={key}>
+              <div class="gene-head">
+                <span>{gene.label}</span>
+                <span class="gene-val">{typeof raw === "string" ? raw : "—"}</span>
+              </div>
+              <div class="swatches">
+                {gene.palette.map((hex) => {
+                  const selected = hex.toLowerCase() === active;
+                  return (
+                    <button
+                      key={hex}
+                      type="button"
+                      class={`swatch${selected ? " active" : ""}`}
+                      style={{ background: hex }}
+                      aria-pressed={selected}
+                      aria-label={`${gene.label} ${hex}`}
+                      title={hex}
+                      onClick={() => setColor(key, hex)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
 
         if (gene.kind === "list") {
           const band = Array.isArray(raw) ? raw : [];

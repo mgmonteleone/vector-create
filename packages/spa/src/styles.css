@@ -233,6 +233,65 @@ button:disabled {
   font-family: var(--display);
   font-size: 22px;
 }
+.preview.rendering {
+  position: relative;
+}
+
+/* ---- agent-rendering overlay ---- */
+.render-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  overflow: hidden;
+}
+.render-overlay .render-label {
+  color: var(--fg-bright);
+  font-family: var(--display);
+  font-size: 18px;
+  text-shadow: var(--glow);
+  letter-spacing: 1px;
+}
+.render-overlay .scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--fg);
+  opacity: 0.35;
+  animation: scan 1.6s linear infinite;
+}
+@keyframes scan {
+  from {
+    top: 0;
+  }
+  to {
+    top: 100%;
+  }
+}
+
+/* ---- colour-gene swatches ---- */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--fg-dim);
+  cursor: pointer;
+  border-radius: 2px;
+}
+.swatch.active {
+  border-color: var(--fg-bright);
+  box-shadow: 0 0 0 2px var(--fg-bright);
+}
 
 /* ---- genome sliders ---- */
 .gene {
@@ -349,6 +408,36 @@ input[type="range"]::-moz-range-thumb {
 }
 .prompt input::placeholder {
   color: var(--fg-dim);
+}
+.prompt.working {
+  color: var(--fg-bright);
+  font-family: var(--mono);
+  font-size: 14px;
+  gap: 8px;
+}
+.prompt.working .spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+.prompt.working .working-text {
+  flex: 1;
+  text-shadow: var(--glow);
+}
+.prompt.working .elapsed {
+  color: var(--fg-dim);
+}
+.cursor.blink {
+  animation: blink 1s step-end infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 /* ---- terminal log ---- */

@@ -93,6 +93,7 @@ export async function steerGenomeOp(
     for (const [key, value] of Object.entries(parsed.genome)) {
       if (
         typeof value === "number" ||
+        typeof value === "string" ||
         (Array.isArray(value) && value.every((v) => typeof v === "number"))
       ) {
         merged[key] = value as Genome[string];

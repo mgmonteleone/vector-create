@@ -5,10 +5,10 @@ import { mutate, sampleBatch } from "../sampler";
 
 const keys = geneKeys(WORMHOLE_SPEC);
 
-function withinBounds(genome: Record<string, number | number[]>): boolean {
+function withinBounds(genome: Record<string, number | number[] | string>): boolean {
   for (const key of keys) {
     const gene = WORMHOLE_SPEC[key];
-    if (!gene) {
+    if (!gene || gene.kind === "color") {
       continue;
     }
     const v = genome[key];
@@ -57,9 +57,25 @@ describe("sampleBatch", () => {
       expect(withinBounds(g)).toBe(true);
     }
   });
+
+  test("sampled variations keep the anchor's colours unchanged", () => {
+    const anchor = { ...BASE_GENOME, meshColor: "#9A7BFF" };
+    const { genomes } = sampleBatch(WORMHOLE_SPEC, BASE_GENOME, 6, { seed: 3, anchor, rate: 3 });
+    for (const g of genomes) {
+      expect(g.meshColor).toBe("#9A7BFF");
+    }
+  });
 });
 
 describe("mutate", () => {
+  test("never mutates colour genes (variations keep the palette)", () => {
+    const anchor = { ...BASE_GENOME, meshColor: "#4FA3E3" };
+    const rand = () => 0.9;
+    const mutated = mutate(WORMHOLE_SPEC, BASE_GENOME, anchor, 5, { meshColor: 1 } as never, rand);
+    expect(mutated.meshColor).toBe("#4FA3E3");
+    expect(mutated.streamColor).toBe(BASE_GENOME.streamColor);
+  });
+
   test("biased gene moves in the requested direction", () => {
     // Anchor below max so a +1 bias can raise it.
     const anchor = { ...BASE_GENOME, mouthRx: 96 };

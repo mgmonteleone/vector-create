@@ -110,7 +110,7 @@ export function validateConceptSpec(raw: unknown): ConceptSpec | null {
       baseIn && typeof baseIn === "object" ? (baseIn as Record<string, unknown>)[key] : undefined;
     if (isFiniteNum(raw) && gene) {
       baseGenome[key] = raw;
-    } else if (gene) {
+    } else if (gene && gene.kind !== "color") {
       // Default missing baseline to the midpoint so the concept is on-brand.
       baseGenome[key] = (gene.min + gene.max) / 2;
     }

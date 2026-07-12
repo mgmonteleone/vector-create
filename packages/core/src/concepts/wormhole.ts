@@ -24,6 +24,25 @@ import { NON_SCALING, palette, stroke } from "../tokens";
 const CORE_X = 176;
 const CORE_Y = 170;
 
+/**
+ * The constrained colour palette for the wormhole's colour genes: the brand set
+ * (tokens.ts) plus a few tasteful accents. Colour genes may only take a value
+ * from this list — prompts never inject free-form hex; the agent picks the
+ * nearest brand-fitting entry.
+ */
+export const WORMHOLE_COLOR_PALETTE: string[] = [
+  palette.structure, // #ededf0
+  palette.active, // #5CCC76
+  palette.glowGreen, // #1AA049
+  palette.mint, // #99F7A9
+  palette.signal, // #F45E0F
+  palette.mutedNode, // #bcbcc2
+  "#4FA3E3", // blue
+  "#4FE3D2", // cyan
+  "#9A7BFF", // violet
+  "#FFB454", // amber
+];
+
 // Flow topology: data flows LEFT -> into the TOP mouth, through the throat, and
 // EMERGES from the BOTTOM mouth -> out to the RIGHT.
 const MOUTH_OFFSET = 120; // = BASE_GENOME.heightScale
@@ -70,6 +89,12 @@ export const BASE_GENOME: Genome = {
   flowDuration: 3.0,
   flowDash: 0.14,
   flowGap: 0.5,
+  // --- Per-element colours (prompt-first; excluded from mutation) ---
+  meshColor: palette.structure,
+  streamColor: palette.active,
+  nodeColor: palette.active,
+  cardStroke: palette.active,
+  glowColor: palette.active,
 };
 
 /**
@@ -92,6 +117,12 @@ export const WORMHOLE_SPEC: GenomeSpec = {
   revealDuration: { kind: "num", min: 2.8, max: 4.6, step: 0.5, label: "cycle length" },
   litFraction: { kind: "num", min: 0.7, max: 0.9, step: 0.06, label: "lit fraction" },
   ringDurations: { kind: "list", min: 2.2, max: 5.0, step: 0.6, label: "ring pulse speeds" },
+  // --- Per-element colours (constrained palette; prompt-first) ---
+  meshColor: { kind: "color", palette: WORMHOLE_COLOR_PALETTE, label: "mesh colour" },
+  streamColor: { kind: "color", palette: WORMHOLE_COLOR_PALETTE, label: "stream colour" },
+  nodeColor: { kind: "color", palette: WORMHOLE_COLOR_PALETTE, label: "node colour" },
+  cardStroke: { kind: "color", palette: WORMHOLE_COLOR_PALETTE, label: "card stroke" },
+  glowColor: { kind: "color", palette: WORMHOLE_COLOR_PALETTE, label: "glow colour" },
 };
 
 /** Wormhole-specific prompt steering rules (extend the shared set). */
@@ -145,9 +176,17 @@ export const WORMHOLE_PROMPT_RULES: PromptRule[] = [
 
 const num = (g: Genome, key: string): number => Number(g[key]);
 const list = (g: Genome, key: string): number[] => g[key] as number[];
+// Colour genes default to their token when absent so old genomes still render.
+const col = (g: Genome, key: string, fallback: string): string =>
+  typeof g[key] === "string" ? (g[key] as string) : fallback;
 
 export function wormhole(prefix = "BH1", genome: Genome = {}): string {
   const g: Genome = { ...BASE_GENOME, ...genome };
+  const meshColor = col(g, "meshColor", palette.structure);
+  const streamColor = col(g, "streamColor", palette.active);
+  const nodeColor = col(g, "nodeColor", palette.active);
+  const cardStroke = col(g, "cardStroke", palette.active);
+  const glowColor = col(g, "glowColor", palette.active);
   const inboundCount = INBOUND_SOURCES.length;
   const outputCount = OUTPUT_ROWS.length;
   const totalPhases = inboundCount + outputCount;
@@ -200,11 +239,11 @@ export function wormhole(prefix = "BH1", genome: Genome = {}): string {
     const e = inEntry(i);
     parts.push(
       flowConnector(intoTop(s.x, s.y, e.x, e.y, CORE_X, CORE_Y), inboundClasses[i] as string, {
-        color: palette.active,
+        color: streamColor,
         width: stroke.primary,
         baseOpacity: 0.3,
         filter: `${prefix}_eg`,
-      }) + dataNode(s.x, s.y, 2.6)
+      }) + dataNode(s.x, s.y, 2.6, nodeColor)
     );
   }
 
@@ -220,9 +259,11 @@ export function wormhole(prefix = "BH1", genome: Genome = {}): string {
       ringOpacity: num(g, "ringOpacity"),
       meridianOpacity: num(g, "meridianOpacity"),
       ringClasses,
+      meshColor,
+      glowColor,
     })
   );
-  parts.push(dataNode(CORE_X, CORE_Y, 2.4, palette.active));
+  parts.push(dataNode(CORE_X, CORE_Y, 2.4, nodeColor));
 
   // Live output streams: emerging from the bottom mouth, flowing down-and-out
   // to the right cards.
@@ -233,18 +274,18 @@ export function wormhole(prefix = "BH1", genome: Genome = {}): string {
     const d = outOfBottom(CORE_X, CORE_Y, x.x, x.y, termX, row);
     parts.push(
       flowConnector(d, outputClasses[i] as string, {
-        color: palette.active,
+        color: streamColor,
         width: stroke.primary,
         baseOpacity: 0.3,
         filter: `${prefix}_eg`,
       }) +
-        dataNode(termX, row, 2.8) +
+        dataNode(termX, row, 2.8, nodeColor) +
         outputCard(OUTPUT_X - CARD_W + 2, row - CARD_H / 2, CARD_W, CARD_H, {
           fill: palette.cardFill,
-          stroke: palette.active,
+          stroke: cardStroke,
           opacity: 0.95,
         }) +
-        `<line x1="${OUTPUT_X - CARD_W + 8}" y1="${row}" x2="${OUTPUT_X - 6}" y2="${row}" style="stroke:${palette.active};stroke-width:${stroke.primary};opacity:0.9;${NON_SCALING}"/>`
+        `<line x1="${OUTPUT_X - CARD_W + 8}" y1="${row}" x2="${OUTPUT_X - 6}" y2="${row}" style="stroke:${cardStroke};stroke-width:${stroke.primary};opacity:0.9;${NON_SCALING}"/>`
     );
   }
 
