@@ -1,0 +1,496 @@
+/* =========================================================================
+   VECTOR//CREATE — retro CRT terminal skin.
+   Phosphor-green-on-black by default; an amber theme toggles via [data-theme].
+   Everything is monospace, boxed with ASCII box-drawing borders, and dressed
+   with scanlines + a subtle CRT flicker/vignette. Kept cohesive, not gimmicky.
+   ========================================================================= */
+
+:root {
+  --bg: #05070a;
+  --bg-panel: #070b0d;
+  --phosphor: #5ccc76;
+  --phosphor-dim: #2f7a45;
+  --phosphor-bright: #99f7a9;
+  --amber: #ffb000;
+  --amber-dim: #a06c00;
+  --amber-bright: #ffd37a;
+  --signal: #f45e0f;
+  --grid: rgba(92, 204, 118, 0.08);
+
+  --fg: var(--phosphor);
+  --fg-dim: var(--phosphor-dim);
+  --fg-bright: var(--phosphor-bright);
+  --glow: 0 0 4px rgba(92, 204, 118, 0.55), 0 0 12px rgba(92, 204, 118, 0.25);
+
+  --mono: "IBM Plex Mono", "VT323", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --display: "VT323", var(--mono);
+}
+
+[data-theme="amber"] {
+  --fg: var(--amber);
+  --fg-dim: var(--amber-dim);
+  --fg-bright: var(--amber-bright);
+  --grid: rgba(255, 176, 0, 0.08);
+  --glow: 0 0 4px rgba(255, 176, 0, 0.55), 0 0 12px rgba(255, 176, 0, 0.22);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.5;
+  text-shadow: var(--glow);
+  overflow: hidden;
+}
+
+/* ---- buttons (generic, kept before component overrides for cascade order) ---- */
+button {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--fg-dim);
+  padding: 4px 10px;
+  cursor: pointer;
+  text-shadow: var(--glow);
+}
+button:hover:not(:disabled) {
+  border-color: var(--fg);
+  color: var(--fg-bright);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- CRT overlay: scanlines + vignette + flicker ---- */
+.crt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+.crt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.28) 3px,
+    rgba(0, 0, 0, 0.28) 4px
+  );
+}
+.crt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+  animation: flicker 6s infinite steps(60);
+}
+@keyframes flicker {
+  0%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.94;
+  }
+  98% {
+    opacity: 0.99;
+  }
+  99% {
+    opacity: 0.93;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt::after {
+    animation: none;
+  }
+  .cursor {
+    animation: none;
+  }
+}
+
+/* ---- layout ---- */
+#app {
+  height: 100vh;
+  padding: 10px;
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 28px,
+    var(--bg);
+}
+
+.shell {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 8px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  border: 1px solid var(--fg-dim);
+}
+.brand {
+  font-family: var(--display);
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: var(--fg-bright);
+}
+.topbar .status {
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.topbar .status.online {
+  color: var(--fg-bright);
+}
+.topbar .status.offline {
+  color: var(--signal);
+  text-shadow: 0 0 4px rgba(244, 94, 15, 0.6);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  gap: 8px;
+  min-height: 0;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ---- ASCII panels ---- */
+.panel {
+  border: 1px solid var(--fg-dim);
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel > .panel-title {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--fg-bright);
+  padding: 2px 8px;
+  border-bottom: 1px dashed var(--fg-dim);
+  text-transform: uppercase;
+}
+.panel > .panel-title::before {
+  content: "┤ ";
+  color: var(--fg-dim);
+}
+.panel > .panel-title::after {
+  content: " ├";
+  color: var(--fg-dim);
+}
+.panel-body {
+  padding: 8px;
+  overflow: auto;
+  min-height: 0;
+}
+.panel.grow {
+  flex: 1;
+}
+
+/* ---- preview pane ---- */
+.preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.preview svg {
+  width: 100%;
+  height: 100%;
+  max-width: 640px;
+  max-height: 640px;
+}
+.preview.loading {
+  color: var(--fg-dim);
+  font-family: var(--display);
+  font-size: 22px;
+}
+
+/* ---- genome sliders ---- */
+.gene {
+  margin-bottom: 10px;
+}
+.gene .gene-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.gene .gene-val {
+  color: var(--fg-bright);
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--fg-dim);
+}
+input[type="range"]::-moz-range-track {
+  height: 2px;
+  background: var(--fg-dim);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 14px;
+  margin-top: -6px;
+  background: var(--fg);
+  box-shadow: var(--glow);
+  border: none;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 14px;
+  border: none;
+  background: var(--fg);
+}
+.gene .band {
+  display: flex;
+  gap: 6px;
+}
+.gene .band input[type="range"] {
+  flex: 1;
+}
+
+/* ---- concept selector ---- */
+.concept-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.concept-list li {
+  margin: 0;
+}
+.concept-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+.concept-list button::before {
+  content: "> ";
+  color: var(--fg-dim);
+}
+.concept-list button:hover:not(:disabled) {
+  border-color: var(--fg-dim);
+}
+.concept-list button.active {
+  color: var(--fg-bright);
+  border-color: var(--fg);
+  background: rgba(92, 204, 118, 0.06);
+}
+[data-theme="amber"] .concept-list button.active {
+  background: rgba(255, 176, 0, 0.06);
+}
+.concept-list button.remote::after {
+  content: " *";
+  color: var(--signal);
+}
+
+/* ---- prompt bar ---- */
+.prompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--fg);
+  padding: 6px 10px;
+  background: var(--bg-panel);
+}
+.prompt .sigil {
+  color: var(--fg-bright);
+  font-family: var(--display);
+  font-size: 18px;
+}
+.prompt input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 14px;
+  text-shadow: var(--glow);
+  outline: none;
+}
+.prompt input::placeholder {
+  color: var(--fg-dim);
+}
+
+/* ---- terminal log ---- */
+.log {
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log .line {
+  margin: 0;
+}
+.log .line::before {
+  content: "» ";
+  color: var(--fg-dim);
+}
+.log .info {
+  color: var(--fg);
+}
+.log .ok {
+  color: var(--fg-bright);
+}
+.log .warn {
+  color: var(--amber-bright);
+}
+.log .err {
+  color: var(--signal);
+}
+.log .agent {
+  color: var(--fg-bright);
+}
+.log .agent::before {
+  content: "◈ ";
+  color: var(--fg-dim);
+}
+
+/* ---- gallery ---- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+.gallery .cell {
+  border: 1px solid var(--fg-dim);
+  aspect-ratio: 1;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  background: var(--bg);
+}
+.gallery .cell:hover:not(:disabled) {
+  border-color: var(--fg);
+}
+.gallery .cell svg {
+  width: 100%;
+  height: 100%;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+input[type="text"].name-input {
+  font-family: var(--mono);
+  background: transparent;
+  border: 1px solid var(--fg-dim);
+  color: var(--fg);
+  padding: 3px 6px;
+  outline: none;
+}
+
+/* ---- blinking cursor ---- */
+.cursor {
+  display: inline-block;
+  width: 8px;
+  animation: blink 1s steps(2, start) infinite;
+}
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* ---- boot sequence ---- */
+.boot {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 40px;
+  z-index: 5000;
+  overflow: hidden;
+}
+.boot pre {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.boot .ascii {
+  font-family: var(--display);
+  color: var(--fg-bright);
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.saved-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+.saved-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 2px 0;
+}
+.saved-list button {
+  border: none;
+  padding: 0;
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+}
+.saved-list .load {
+  color: var(--fg);
+}
+.saved-list .load:hover:not(:disabled) {
+  color: var(--fg-bright);
+  border: none;
+}
+.saved-list .del {
+  color: var(--fg-dim);
+}
+.saved-list .del:hover:not(:disabled) {
+  color: var(--signal);
+  border: none;
+}
+
+.hint {
+  color: var(--fg-dim);
+  font-size: 11px;
+}

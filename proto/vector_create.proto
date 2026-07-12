@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+// The VectorCreate service exposes the canonical vector-create operation set
+// over gRPC. It is the same six operations the REST and MCP faces expose; all
+// three are thin adapters over the shared operations module. Loaded at runtime
+// with @grpc/proto-loader (no code generation / bazel).
+package vector_create.v1;
+
+// A registered concept and its tunable genome schema. `genome_spec` and
+// `base_genome` are JSON-encoded (a Genome is an open map of string -> number
+// or number[], which does not map cleanly onto a fixed proto message), so they
+// travel as JSON strings and are parsed by the client.
+message Concept {
+  string id = 1;
+  string title = 2;
+  string genome_spec = 3; // JSON: GenomeSpec
+  string base_genome = 4; // JSON: Genome
+}
+
+// --- ListConcepts ---
+message ListConceptsRequest {}
+
+message ListConceptsResponse {
+  repeated Concept concepts = 1;
+}
+
+// --- Render ---
+message RenderRequest {
+  string concept_id = 1;
+  string genome = 2; // JSON: partial Genome (optional)
+  string prefix = 3; // optional id prefix for the SVG
+}
+
+message RenderResponse {
+  string svg = 1;
+}
+
+// --- Steer ---
+message SteerRequest {
+  string concept_id = 1;
+  string genome = 2; // JSON: Genome (starting point)
+  string prompt = 3;
+}
+
+message SteerResponse {
+  string genome = 1; // JSON: steered Genome
+  string svg = 2;
+  string rationale = 3;
+  string source = 4; // "agent" | "heuristic"
+}
+
+// --- Variations ---
+message VariationsRequest {
+  string concept_id = 1;
+  int32 n = 2;
+  int32 seed = 3;
+  string anchor = 4; // JSON: Genome (optional)
+  string bias = 5; // JSON: Record<string, 1 | -1> (optional)
+  double rate = 6; // optional mutation strength (0 => default)
+}
+
+message VariationsResponse {
+  repeated string genomes = 1; // JSON-encoded Genome per entry
+  repeated string svgs = 2;
+}
+
+// --- CreateConcept ---
+message CreateConceptRequest {
+  string description = 1;
+}
+
+message CreateConceptResponse {
+  string concept_id = 1;
+  string title = 2;
+  string svg = 3;
+  string source = 4; // "agent" | "heuristic"
+}
+
+// --- ExportPng ---
+message ExportPngRequest {
+  string svg = 1;
+  int32 width = 2; // optional (0 => intrinsic)
+  int32 height = 3; // optional (0 => intrinsic)
+}
+
+message ExportPngResponse {
+  bytes png = 1;
+}
+
+service VectorCreate {
+  rpc ListConcepts(ListConceptsRequest) returns (ListConceptsResponse);
+  rpc Render(RenderRequest) returns (RenderResponse);
+  rpc Steer(SteerRequest) returns (SteerResponse);
+  rpc Variations(VariationsRequest) returns (VariationsResponse);
+  rpc CreateConcept(CreateConceptRequest) returns (CreateConceptResponse);
+  rpc ExportPng(ExportPngRequest) returns (ExportPngResponse);
+}

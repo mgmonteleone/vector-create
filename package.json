@@ -1,0 +1,21 @@
+{
+  "name": "vector-create",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent-powered generative vector-graphics studio — SPA, REST/gRPC, and hosted MCP.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "lint": "bun run --filter '*' lint",
+    "dev:server": "bun run --filter @vector-create/server dev",
+    "dev:spa": "bun run --filter @vector-create/spa dev"
+  },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.1"
+  }
+}
